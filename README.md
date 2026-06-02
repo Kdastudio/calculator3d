@@ -13,7 +13,7 @@ App multiplataforma que replica a [Calculadora 3D Print Studio](https://forja3dp
 - **Perfil** — dados da empresa + logo sincronizados
 - **Cálculos salvos** — histórico na nuvem + G-code no Storage
 - **Orçamentos salvos** — carregar em qualquer dispositivo
-- Modo **convidado** — funciona offline sem conta
+- **Login obrigatório** — acesso à calculadora somente com conta autenticada
 
 ## Configurar Supabase (grátis)
 
@@ -46,7 +46,7 @@ flutter run -d macos
 flutter run
 ```
 
-Sem `.env` configurado, o app roda em **modo convidado** (sem sync).
+Sem `.env` configurado, o login fica indisponível até configurar o Supabase.
 
 ## Deploy Web (grátis)
 

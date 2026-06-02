@@ -76,7 +76,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Acesse sua conta para usar a calculadora',
+                  _isRegister
+                      ? 'Crie sua conta para salvar e sincronizar seus dados'
+                      : 'Sincronize cálculos e orçamentos entre dispositivos',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),

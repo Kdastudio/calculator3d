@@ -40,7 +40,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Acesse sua conta para usar a calculadora'), findsOneWidget);
+    expect(
+      find.text('Sincronize cálculos e orçamentos entre dispositivos'),
+      findsOneWidget,
+    );
+    expect(find.text('Continuar sem conta'), findsNothing);
     expect(find.text('KDA3D Print Studio'), findsNothing);
   });
 }
