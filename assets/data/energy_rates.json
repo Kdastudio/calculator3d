@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-01",
+  "states": [
+    {"state": "Acre", "uf": "AC", "region": "Norte", "distributor": "Energisa AC", "ratePerKwh": 0.95},
+    {"state": "Alagoas", "uf": "AL", "region": "Nordeste", "distributor": "Equatorial AL", "ratePerKwh": 0.98},
+    {"state": "Amapá", "uf": "AP", "region": "Norte", "distributor": "CEA", "ratePerKwh": 0.92},
+    {"state": "Amazonas", "uf": "AM", "region": "Norte", "distributor": "Amazonas Energia", "ratePerKwh": 1.02},
+    {"state": "Bahia", "uf": "BA", "region": "Nordeste", "distributor": "Neoenergia Coelba", "ratePerKwh": 0.95},
+    {"state": "Ceará", "uf": "CE", "region": "Nordeste", "distributor": "Enel CE", "ratePerKwh": 0.96},
+    {"state": "Distrito Federal", "uf": "DF", "region": "Centro-Oeste", "distributor": "Neoenergia Brasília", "ratePerKwh": 0.80},
+    {"state": "Espírito Santo", "uf": "ES", "region": "Sudeste", "distributor": "EDP ES", "ratePerKwh": 0.88},
+    {"state": "Goiás", "uf": "GO", "region": "Centro-Oeste", "distributor": "Equatorial GO", "ratePerKwh": 0.85},
+    {"state": "Maranhão", "uf": "MA", "region": "Nordeste", "distributor": "Equatorial MA", "ratePerKwh": 0.94},
+    {"state": "Mato Grosso", "uf": "MT", "region": "Centro-Oeste", "distributor": "Energisa MT", "ratePerKwh": 0.91},
+    {"state": "Mato Grosso do Sul", "uf": "MS", "region": "Centro-Oeste", "distributor": "Energisa MS", "ratePerKwh": 0.89},
+    {"state": "Minas Gerais", "uf": "MG", "region": "Sudeste", "distributor": "Cemig", "ratePerKwh": 0.98},
+    {"state": "Pará", "uf": "PA", "region": "Norte", "distributor": "Equatorial PA", "ratePerKwh": 1.05},
+    {"state": "Paraíba", "uf": "PB", "region": "Nordeste", "distributor": "Energisa PB", "ratePerKwh": 0.93},
+    {"state": "Paraná", "uf": "PR", "region": "Sul", "distributor": "Copel", "ratePerKwh": 0.85},
+    {"state": "Pernambuco", "uf": "PE", "region": "Nordeste", "distributor": "Neoenergia Pernambuco", "ratePerKwh": 0.97},
+    {"state": "Piauí", "uf": "PI", "region": "Nordeste", "distributor": "Equatorial PI", "ratePerKwh": 0.96},
+    {"state": "Rio de Janeiro", "uf": "RJ", "region": "Sudeste", "distributor": "Light", "ratePerKwh": 1.05},
+    {"state": "Rio Grande do Norte", "uf": "RN", "region": "Nordeste", "distributor": "Neoenergia Cosern", "ratePerKwh": 0.94},
+    {"state": "Rio Grande do Sul", "uf": "RS", "region": "Sul", "distributor": "CEEE Equatorial", "ratePerKwh": 0.88},
+    {"state": "Rondônia", "uf": "RO", "region": "Norte", "distributor": "Energisa RO", "ratePerKwh": 0.90},
+    {"state": "Roraima", "uf": "RR", "region": "Norte", "distributor": "Roraima Energia", "ratePerKwh": 0.92},
+    {"state": "Santa Catarina", "uf": "SC", "region": "Sul", "distributor": "Celesc", "ratePerKwh": 0.82},
+    {"state": "São Paulo", "uf": "SP", "region": "Sudeste", "distributor": "Enel SP", "ratePerKwh": 0.92},
+    {"state": "Sergipe", "uf": "SE", "region": "Nordeste", "distributor": "Energisa SE", "ratePerKwh": 0.96},
+    {"state": "Tocantins", "uf": "TO", "region": "Norte", "distributor": "Energisa TO", "ratePerKwh": 0.87}
+  ]
+}
