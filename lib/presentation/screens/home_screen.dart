@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
-import '../widgets/cloud_sync_bar.dart';
 import '../widgets/cost_section.dart';
 import '../widgets/energy_region_selector.dart';
 import '../widgets/gcode_reader_section.dart';
@@ -50,8 +49,6 @@ class HomeScreen extends StatelessWidget {
 
                   return Column(
                     children: [
-                      const CloudSyncBar(),
-                      const SizedBox(height: 16),
                       if (isDesktop)
                         _DesktopThreeColumnLayout()
                       else if (isTablet)

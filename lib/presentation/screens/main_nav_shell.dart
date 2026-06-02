@@ -57,10 +57,7 @@ class _MainNavShellState extends State<MainNavShell> {
           backgroundColor: AppTheme.background,
           body: Column(
             children: [
-              UserSessionBar(
-                onLogout: _logout,
-                showFinalize: _index == 0,
-              ),
+              UserSessionBar(onLogout: _logout),
               Expanded(
                 child: Row(
                   children: [
