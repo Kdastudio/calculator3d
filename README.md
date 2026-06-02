@@ -36,6 +36,9 @@ SUPABASE_ANON_KEY=eyJhbGci...
 ```
 
 5. Em **Authentication → URL Configuration**, adicione redirect URLs do app web se for usar login no browser.
+6. **Desative confirmação de e-mail** (cadastro entra direto):  
+   **Authentication → Providers → Email → desmarque "Confirm email"**.  
+   Detalhes: [`supabase/AUTH_SETUP.md`](supabase/AUTH_SETUP.md)
 
 ## Executar
 

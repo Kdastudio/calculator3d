@@ -17,20 +17,20 @@ class AuthRepository {
     return _client.auth.onAuthStateChange;
   }
 
-  Future<void> signUp({
+  Future<AuthResponse> signUp({
     required String email,
     required String password,
   }) async {
     _requireClient();
-    await _client!.auth.signUp(email: email, password: password);
+    return _client!.auth.signUp(email: email, password: password);
   }
 
-  Future<void> signIn({
+  Future<AuthResponse> signIn({
     required String email,
     required String password,
   }) async {
     _requireClient();
-    await _client!.auth.signInWithPassword(email: email, password: password);
+    return _client!.auth.signInWithPassword(email: email, password: password);
   }
 
   Future<void> signOut() async {
