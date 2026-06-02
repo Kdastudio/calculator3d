@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/user_session_bar.dart';
 import 'inventory_screen.dart';
 import 'compare_screen.dart';
 import 'home_screen.dart';
 import 'saved_items_screen.dart';
+import 'settings_screen.dart';
 import 'supplies_screen.dart';
 
 class MainNavShell extends StatefulWidget {
@@ -26,6 +28,7 @@ class _MainNavShellState extends State<MainNavShell> {
     _NavTab(AppIcons.warehouse, 'Estoque'),
     _NavTab(AppIcons.compare, 'Comparar'),
     _NavTab(AppIcons.folder, 'Histórico'),
+    _NavTab(AppIcons.settings, 'Configurações'),
   ];
 
   Widget _buildPage(int index) {
@@ -35,6 +38,7 @@ class _MainNavShellState extends State<MainNavShell> {
       2 => const InventoryScreen(),
       3 => const CompareScreen(),
       4 => const SavedItemsScreen(),
+      5 => const SettingsScreen(),
       _ => const SizedBox.shrink(),
     };
   }
@@ -53,11 +57,14 @@ class _MainNavShellState extends State<MainNavShell> {
           backgroundColor: AppTheme.background,
           body: Column(
             children: [
-              if (!useRail) _MobileHeader(onLogout: _logout),
+              UserSessionBar(
+                onLogout: _logout,
+                showFinalize: _index == 0,
+              ),
               Expanded(
                 child: Row(
                   children: [
-                    if (useRail) _buildRail(onLogout: _logout),
+                    if (useRail) _buildRail(),
                     Expanded(
                       child: KeyedSubtree(
                         key: ValueKey(_index),
@@ -88,7 +95,7 @@ class _MainNavShellState extends State<MainNavShell> {
     );
   }
 
-  Widget _buildRail({required VoidCallback onLogout}) {
+  Widget _buildRail() {
     return Container(
       width: 152,
       decoration: const BoxDecoration(
@@ -139,13 +146,18 @@ class _MainNavShellState extends State<MainNavShell> {
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       onTap: () => setState(() => _index = i),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
+                        ),
                         child: Row(
                           children: [
                             Icon(
                               tab.icon,
                               size: 17,
-                              color: selected ? AppTheme.accent : AppTheme.textMuted,
+                              color: selected
+                                  ? AppTheme.accent
+                                  : AppTheme.textMuted,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -153,8 +165,12 @@ class _MainNavShellState extends State<MainNavShell> {
                                 tab.label,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                                  color: selected ? AppTheme.textPrimary : AppTheme.textSecondary,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: selected
+                                      ? AppTheme.textPrimary
+                                      : AppTheme.textSecondary,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -168,60 +184,7 @@ class _MainNavShellState extends State<MainNavShell> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
-            child: Tooltip(
-              message: 'Desconectar',
-              child: IconButton(
-                onPressed: onLogout,
-                icon: const Icon(AppIcons.logout, size: 20),
-                style: IconButton.styleFrom(
-                  foregroundColor: AppTheme.textSecondary,
-                  backgroundColor: AppTheme.surfaceRaised,
-                ),
-              ),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-}
-
-class _MobileHeader extends StatelessWidget {
-  const _MobileHeader({required this.onLogout});
-
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.card,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              const Text(
-                'KDA3D Print Studio',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              Tooltip(
-                message: 'Desconectar',
-                child: IconButton(
-                  onPressed: onLogout,
-                  icon: const Icon(AppIcons.logout, size: 20),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

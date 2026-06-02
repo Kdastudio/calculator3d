@@ -20,9 +20,16 @@ class AuthRepository {
   Future<AuthResponse> signUp({
     required String email,
     required String password,
+    String? displayName,
   }) async {
     _requireClient();
-    return _client!.auth.signUp(email: email, password: password);
+    return _client!.auth.signUp(
+      email: email,
+      password: password,
+      data: displayName != null && displayName.trim().isNotEmpty
+          ? {'display_name': displayName.trim()}
+          : null,
+    );
   }
 
   Future<AuthResponse> signIn({
@@ -36,6 +43,18 @@ class AuthRepository {
   Future<void> signOut() async {
     _requireClient();
     await _client!.auth.signOut();
+  }
+
+  Future<UserResponse> updateUser(UserAttributes attributes) async {
+    _requireClient();
+    return _client!.auth.updateUser(attributes);
+  }
+
+  Future<AuthResponse> reauthenticate({
+    required String email,
+    required String password,
+  }) async {
+    return signIn(email: email, password: password);
   }
 
   void _requireClient() {

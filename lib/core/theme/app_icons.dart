@@ -7,6 +7,7 @@ abstract final class AppIcons {
   static const warehouse = LucideIcons.warehouse;
   static const compare = LucideIcons.gitCompare;
   static const folder = LucideIcons.folderOpen;
+  static const settings = LucideIcons.settings;
   static const printer = LucideIcons.printer;
   static const user = LucideIcons.circleUser;
   static const logout = LucideIcons.logOut;

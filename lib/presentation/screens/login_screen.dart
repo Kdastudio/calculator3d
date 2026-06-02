@@ -17,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isRegister = false;
@@ -24,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -37,9 +39,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final name = _nameController.text.trim();
 
     if (_isRegister) {
-      final outcome = await auth.signUp(email, password);
+      final outcome = await auth.signUp(
+        email,
+        password,
+        displayName: name,
+      );
       if (!mounted) return;
 
       switch (outcome) {
@@ -66,6 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isRegister = !_isRegister;
       _passwordController.clear();
+      if (!_isRegister) _nameController.clear();
     });
   }
 
@@ -124,6 +132,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
+                      if (_isRegister) ...[
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nome',
+                            prefixIcon: Icon(AppIcons.user, size: 20),
+                          ),
+                          textCapitalization: TextCapitalization.words,
+                          validator: (v) {
+                            if (!_isRegister) return null;
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Informe seu nome';
+                            }
+                            if (v.trim().length < 2) {
+                              return 'Mínimo 2 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(

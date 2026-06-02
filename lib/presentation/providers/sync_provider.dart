@@ -63,6 +63,16 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshProfile(String userId) async {
+    try {
+      _profile = await _profileRepository.fetchProfile(userId);
+      notifyListeners();
+    } catch (e) {
+      _message = 'Falha ao atualizar perfil: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> applyProfileToCalculator(CalculatorProvider calculator, String userId) async {
     _profile ??= await _profileRepository.fetchProfile(userId);
     if (_profile == null) return;
@@ -109,6 +119,7 @@ class SyncProvider extends ChangeNotifier {
       final profile = UserProfile(
         id: userId,
         email: _profile?.email,
+        displayName: _profile?.displayName ?? '',
         companyName: calculator.quoteData.companyName,
         companyEmail: calculator.quoteData.companyEmail,
         companyPhone: calculator.quoteData.companyPhone,

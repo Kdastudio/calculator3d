@@ -28,4 +28,22 @@ class ProfileRepository {
 
     await _client.from('profiles').upsert({'id': userId, ...profile.toJson()});
   }
+
+  Future<void> updateDisplayName(String userId, String displayName) async {
+    if (_client == null) return;
+
+    await _client
+        .from('profiles')
+        .update({'display_name': displayName.trim()})
+        .eq('id', userId);
+  }
+
+  Future<void> updateEmail(String userId, String email) async {
+    if (_client == null) return;
+
+    await _client
+        .from('profiles')
+        .update({'email': email.trim()})
+        .eq('id', userId);
+  }
 }

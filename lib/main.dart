@@ -8,6 +8,7 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/calculator_provider.dart';
 import 'presentation/providers/energy_provider.dart';
 import 'presentation/providers/quote_history_provider.dart';
+import 'presentation/providers/settings_provider.dart';
 import 'presentation/providers/stock_provider.dart';
 import 'presentation/providers/supply_provider.dart';
 import 'presentation/providers/sync_provider.dart';
@@ -38,6 +39,7 @@ class Kda3dCalculatorApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => QuoteHistoryProvider()),
         ChangeNotifierProvider(create: (_) => CalculatorProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: MaterialApp(
         title: 'Calculadora 3D Print Studio',

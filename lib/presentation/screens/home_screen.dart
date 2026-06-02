@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
-import '../providers/calculator_provider.dart';
 import '../widgets/cloud_sync_bar.dart';
 import '../widgets/cost_section.dart';
 import '../widgets/energy_region_selector.dart';
-import '../widgets/finalize_quote_bar.dart';
 import '../widgets/gcode_reader_section.dart';
 import '../widgets/margin_presets_row.dart';
 import '../widgets/multi_filament_section.dart';
@@ -41,23 +38,6 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          actions: [
-            Selector<CalculatorProvider, bool>(
-              selector: (_, p) => p.quoteData.isFinalized,
-              builder: (context, finalized, _) {
-                if (finalized) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilledButton.icon(
-                    onPressed: () => runFinalizeQuoteFlow(context),
-                    icon: const Icon(AppIcons.checkCircle, size: 16),
-                    label: const Text('Finalizar'),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-          ],
         ),
         SliverPadding(
           padding: const EdgeInsets.all(AppLayout.pagePadding),

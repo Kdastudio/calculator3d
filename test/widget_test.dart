@@ -7,6 +7,7 @@ import 'package:kda3d_calculator/presentation/providers/auth_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/calculator_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/energy_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/quote_history_provider.dart';
+import 'package:kda3d_calculator/presentation/providers/settings_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/stock_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/supply_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/sync_provider.dart';
@@ -32,6 +33,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => QuoteHistoryProvider()),
           ChangeNotifierProvider(create: (_) => CalculatorProvider()),
           ChangeNotifierProvider(create: (_) => SyncProvider()),
+          ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ],
         child: const MaterialApp(
           home: AppShell(),

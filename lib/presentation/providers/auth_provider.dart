@@ -6,15 +6,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/env.dart';
 import '../../core/config/supabase_config.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/profile_repository.dart';
 import 'auth_submit_result.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthRepository? authRepository})
-      : _authRepository = authRepository ?? AuthRepository() {
+  AuthProvider({
+    AuthRepository? authRepository,
+    ProfileRepository? profileRepository,
+  })  : _authRepository = authRepository ?? AuthRepository(),
+        _profileRepository = profileRepository ?? ProfileRepository() {
     _init();
   }
 
   final AuthRepository _authRepository;
+  final ProfileRepository _profileRepository;
   StreamSubscription<AuthState>? _subscription;
 
   User? _user;
@@ -78,12 +83,17 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<SignUpOutcome> signUp(String email, String password) async {
+  Future<SignUpOutcome> signUp(
+    String email,
+    String password, {
+    String? displayName,
+  }) async {
     _setSubmitting();
     try {
       final response = await _authRepository.signUp(
         email: email,
         password: password,
+        displayName: displayName,
       );
 
       if (_isDuplicateRegistration(response.user)) {
@@ -91,30 +101,31 @@ class AuthProvider extends ChangeNotifier {
         return SignUpOutcome.failed;
       }
 
+      SignUpOutcome outcome;
       if (response.session != null) {
         _user = response.session!.user;
-        _error = null;
-        _info = null;
-        notifyListeners();
-        return SignUpOutcome.loggedIn;
-      }
-
-      if (response.user != null) {
+        outcome = SignUpOutcome.loggedIn;
+      } else if (response.user != null) {
         final loggedIn = await _trySignInAfterSignUp(email, password);
         if (loggedIn) {
-          notifyListeners();
-          return SignUpOutcome.loggedIn;
+          outcome = SignUpOutcome.loggedIn;
+        } else {
+          _user = null;
+          _error = null;
+          _info =
+              'Conta criada com sucesso! Agora faça login com seu e-mail e senha.';
+          return SignUpOutcome.needsLogin;
         }
-
-        _user = null;
-        _error = null;
-        _info =
-            'Conta criada com sucesso! Agora faça login com seu e-mail e senha.';
-        return SignUpOutcome.needsLogin;
+      } else {
+        _error = 'Não foi possível criar a conta.';
+        return SignUpOutcome.failed;
       }
 
-      _error = 'Não foi possível criar a conta.';
-      return SignUpOutcome.failed;
+      await _persistDisplayName(displayName);
+      _error = null;
+      _info = null;
+      notifyListeners();
+      return outcome;
     } catch (e) {
       _error = _mapError(e);
       return SignUpOutcome.failed;
@@ -144,6 +155,18 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _persistDisplayName(String? displayName) async {
+    final userId = _user?.id;
+    final name = displayName?.trim();
+    if (userId == null || name == null || name.isEmpty) return;
+
+    try {
+      await _profileRepository.updateDisplayName(userId, name);
+    } catch (e) {
+      debugPrint('Falha ao salvar nome do usuário: $e');
     }
   }
 

@@ -2,6 +2,7 @@ class UserProfile {
   UserProfile({
     required this.id,
     this.email,
+    this.displayName = '',
     this.companyName = '',
     this.companyEmail = '',
     this.companyPhone = '',
@@ -12,6 +13,7 @@ class UserProfile {
 
   final String id;
   final String? email;
+  final String displayName;
   final String companyName;
   final String companyEmail;
   final String companyPhone;
@@ -22,6 +24,7 @@ class UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
         id: json['id'] as String,
         email: json['email'] as String?,
+        displayName: json['display_name'] as String? ?? '',
         companyName: json['company_name'] as String? ?? '',
         companyEmail: json['company_email'] as String? ?? '',
         companyPhone: json['company_phone'] as String? ?? '',
@@ -31,6 +34,7 @@ class UserProfile {
       );
 
   Map<String, dynamic> toJson() => {
+        'display_name': displayName,
         'company_name': companyName,
         'company_email': companyEmail,
         'company_phone': companyPhone,
