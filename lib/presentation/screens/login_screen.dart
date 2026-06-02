@@ -196,10 +196,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                       const SizedBox(height: 24),
+                      if (auth.isSubmitting)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
                       PrimaryButton(
                         label: _isRegister ? 'Criar conta' : 'Entrar',
-                        onPressed:
-                            auth.isLoading || !Env.hasSupabase ? null : _submit,
+                        onPressed: auth.isSubmitting || !Env.hasSupabase
+                            ? null
+                            : _submit,
                       ),
                       TextButton(
                         onPressed: _toggleRegisterMode,

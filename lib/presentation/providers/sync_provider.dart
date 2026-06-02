@@ -70,8 +70,12 @@ class SyncProvider extends ChangeNotifier {
     final profile = _profile!;
     List<int>? logoBytes;
     if (profile.logoPath != null) {
-      final bytes = await _storageRepository.downloadFile('logos', profile.logoPath!);
-      logoBytes = bytes?.toList();
+      try {
+        final bytes = await _storageRepository.downloadFile('logos', profile.logoPath!);
+        logoBytes = bytes?.toList();
+      } catch (_) {
+        logoBytes = null;
+      }
     }
 
     calculator.applyCloudProfile(

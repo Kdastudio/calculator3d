@@ -24,9 +24,10 @@ class _AppShellState extends State<AppShell> {
   VoidCallback? _stockSyncListener;
   StockProvider? _stockProvider;
   bool _coreReady = false;
-  bool _userSessionReady = false;
-  bool _sessionLoading = false;
-  String? _loadedUserId;
+  String? _activeUserId;
+  bool _sessionStarted = false;
+
+  static const _sessionLoadTimeout = Duration(seconds: 15);
 
   @override
   void dispose() {
@@ -53,19 +54,23 @@ class _AppShellState extends State<AppShell> {
     unawaited(_loadCoreData(energy, stock, calculator));
   }
 
-  Future<void> _loadUserSession(AuthProvider auth) async {
-    if (!auth.isAuthenticated || auth.user == null) return;
-    final userId = auth.user!.id;
+  void _scheduleUserSession(AuthProvider auth) {
+    final userId = auth.user?.id;
+    if (userId == null) return;
 
-    if (_sessionLoading) return;
-    if (_userSessionReady && _loadedUserId == userId) return;
-
-    if (_loadedUserId != null && _loadedUserId != userId) {
+    if (_activeUserId != null && _activeUserId != userId) {
       _resetUserProviders();
+      _sessionStarted = false;
     }
 
-    _sessionLoading = true;
+    _activeUserId = userId;
 
+    if (_sessionStarted) return;
+    _sessionStarted = true;
+    unawaited(_loadUserSession(userId));
+  }
+
+  Future<void> _loadUserSession(String userId) async {
     try {
       final sync = context.read<SyncProvider>();
       final supplies = context.read<SupplyProvider>();
@@ -74,19 +79,21 @@ class _AppShellState extends State<AppShell> {
       final calculator = context.read<CalculatorProvider>();
       final energy = context.read<EnergyProvider>();
 
-      await sync.loadAll(userId);
-      if (!mounted) return;
+      await sync.loadAll(userId).timeout(_sessionLoadTimeout);
+      if (!mounted || _activeUserId != userId) return;
 
       await Future.wait([
         supplies.loadForUser(userId),
         stock.loadForUser(userId),
         history.loadForUser(userId),
-      ]);
-      if (!mounted) return;
+      ]).timeout(_sessionLoadTimeout);
+      if (!mounted || _activeUserId != userId) return;
 
       calculator.resetSession();
-      await sync.applyProfileToCalculator(calculator, userId);
-      if (!mounted) return;
+      await sync
+          .applyProfileToCalculator(calculator, userId)
+          .timeout(_sessionLoadTimeout);
+      if (!mounted || _activeUserId != userId) return;
 
       energy.applyFromCostInputs(
         stateEnergy: calculator.costInputs.stateEnergy,
@@ -95,22 +102,8 @@ class _AppShellState extends State<AppShell> {
       );
       calculator.syncEnergyFromProvider(energy);
       calculator.updateStockContext(stock.items);
-
-      if (mounted) {
-        setState(() {
-          _userSessionReady = true;
-          _loadedUserId = userId;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _userSessionReady = true;
-          _loadedUserId = userId;
-        });
-      }
-    } finally {
-      _sessionLoading = false;
+    } catch (e, stack) {
+      debugPrint('Falha ao carregar sessão do usuário: $e\n$stack');
     }
   }
 
@@ -120,14 +113,12 @@ class _AppShellState extends State<AppShell> {
     context.read<SupplyProvider>().resetSession();
     context.read<QuoteHistoryProvider>().resetSession();
     context.read<CalculatorProvider>().resetSession();
-    _userSessionReady = false;
-    _loadedUserId = null;
-    _sessionLoading = false;
   }
 
   void _onLoggedOut() {
-    if (!mounted) return;
-    setState(_resetUserProviders);
+    _activeUserId = null;
+    _sessionStarted = false;
+    _resetUserProviders();
   }
 
   Future<void> _loadCoreData(
@@ -150,33 +141,32 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
-        if (!_coreReady && !auth.isLoading) {
+        if (!_coreReady && !auth.isInitializing) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
         }
 
-        if (auth.isLoading) {
+        if (auth.isInitializing) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (!auth.isAuthenticated) {
-          if (_userSessionReady) {
+          if (_activeUserId != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _onLoggedOut();
+              if (mounted) {
+                setState(_onLoggedOut);
+              }
             });
           }
           return const LoginScreen();
         }
 
-        if (!_userSessionReady || _loadedUserId != auth.user?.id) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _loadUserSession(auth);
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && auth.isAuthenticated) {
+            _scheduleUserSession(auth);
+          }
+        });
 
         return const MainNavShell();
       },

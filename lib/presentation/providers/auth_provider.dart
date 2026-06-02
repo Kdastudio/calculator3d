@@ -18,12 +18,14 @@ class AuthProvider extends ChangeNotifier {
   StreamSubscription<AuthState>? _subscription;
 
   User? _user;
-  bool _loading = true;
+  bool _initializing = true;
+  bool _submitting = false;
   String? _error;
   String? _info;
 
   bool get isConfigured => Env.hasSupabase && SupabaseConfig.isReady;
-  bool get isLoading => _loading;
+  bool get isInitializing => _initializing;
+  bool get isSubmitting => _submitting;
   bool get isAuthenticated => _user != null;
   User? get user => _user;
   String? get error => _error;
@@ -32,22 +34,27 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _init() async {
     if (!isConfigured) {
-      _loading = false;
+      _initializing = false;
       notifyListeners();
       return;
     }
 
     _user = _authRepository.currentUser;
     _subscription = _authRepository.authStateChanges.listen((state) {
-      _user = state.session?.user;
+      final sessionUser = state.session?.user;
+      if (sessionUser != null) {
+        _user = sessionUser;
+      } else if (state.event == AuthChangeEvent.signedOut) {
+        _user = null;
+      }
       notifyListeners();
     });
-    _loading = false;
+    _initializing = false;
     notifyListeners();
   }
 
   Future<bool> signIn(String email, String password) async {
-    _setBusy();
+    _setSubmitting();
     try {
       final response = await _authRepository.signIn(
         email: email,
@@ -60,18 +67,19 @@ class AuthProvider extends ChangeNotifier {
       }
       _error = null;
       _info = null;
+      notifyListeners();
       return true;
     } catch (e) {
       _error = _mapError(e);
       return false;
     } finally {
-      _loading = false;
+      _submitting = false;
       notifyListeners();
     }
   }
 
   Future<SignUpOutcome> signUp(String email, String password) async {
-    _setBusy();
+    _setSubmitting();
     try {
       final response = await _authRepository.signUp(
         email: email,
@@ -87,12 +95,14 @@ class AuthProvider extends ChangeNotifier {
         _user = response.session!.user;
         _error = null;
         _info = null;
+        notifyListeners();
         return SignUpOutcome.loggedIn;
       }
 
       if (response.user != null) {
         final loggedIn = await _trySignInAfterSignUp(email, password);
         if (loggedIn) {
+          notifyListeners();
           return SignUpOutcome.loggedIn;
         }
 
@@ -109,7 +119,7 @@ class AuthProvider extends ChangeNotifier {
       _error = _mapError(e);
       return SignUpOutcome.failed;
     } finally {
-      _loading = false;
+      _submitting = false;
       notifyListeners();
     }
   }
@@ -155,8 +165,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setBusy() {
-    _loading = true;
+  void _setSubmitting() {
+    _submitting = true;
     _error = null;
     _info = null;
     notifyListeners();
