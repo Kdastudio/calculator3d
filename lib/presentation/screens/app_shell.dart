@@ -25,6 +25,7 @@ class _AppShellState extends State<AppShell> {
   StockProvider? _stockProvider;
   bool _coreReady = false;
   bool _userSessionReady = false;
+  bool _sessionLoading = false;
   String? _loadedUserId;
 
   @override
@@ -56,42 +57,61 @@ class _AppShellState extends State<AppShell> {
     if (!auth.isAuthenticated || auth.user == null) return;
     final userId = auth.user!.id;
 
+    if (_sessionLoading) return;
+    if (_userSessionReady && _loadedUserId == userId) return;
+
     if (_loadedUserId != null && _loadedUserId != userId) {
       _resetUserProviders();
     }
-    if (_userSessionReady && _loadedUserId == userId) return;
 
-    final sync = context.read<SyncProvider>();
-    final supplies = context.read<SupplyProvider>();
-    final stock = context.read<StockProvider>();
-    final history = context.read<QuoteHistoryProvider>();
-    final calculator = context.read<CalculatorProvider>();
-    final energy = context.read<EnergyProvider>();
+    _sessionLoading = true;
 
-    await sync.loadAll(userId);
-    if (!mounted) return;
+    try {
+      final sync = context.read<SyncProvider>();
+      final supplies = context.read<SupplyProvider>();
+      final stock = context.read<StockProvider>();
+      final history = context.read<QuoteHistoryProvider>();
+      final calculator = context.read<CalculatorProvider>();
+      final energy = context.read<EnergyProvider>();
 
-    await Future.wait([
-      supplies.loadForUser(userId),
-      stock.loadForUser(userId),
-      history.loadForUser(userId),
-    ]);
-    if (!mounted) return;
+      await sync.loadAll(userId);
+      if (!mounted) return;
 
-    calculator.resetSession();
-    await sync.applyProfileToCalculator(calculator, userId);
-    if (!mounted) return;
+      await Future.wait([
+        supplies.loadForUser(userId),
+        stock.loadForUser(userId),
+        history.loadForUser(userId),
+      ]);
+      if (!mounted) return;
 
-    energy.applyFromCostInputs(
-      stateEnergy: calculator.costInputs.stateEnergy,
-      customEnergyRate: calculator.costInputs.customEnergyRate,
-      tariffFlag: calculator.costInputs.tariffFlag,
-    );
-    calculator.syncEnergyFromProvider(energy);
-    calculator.updateStockContext(stock.items);
+      calculator.resetSession();
+      await sync.applyProfileToCalculator(calculator, userId);
+      if (!mounted) return;
 
-    _userSessionReady = true;
-    _loadedUserId = userId;
+      energy.applyFromCostInputs(
+        stateEnergy: calculator.costInputs.stateEnergy,
+        customEnergyRate: calculator.costInputs.customEnergyRate,
+        tariffFlag: calculator.costInputs.tariffFlag,
+      );
+      calculator.syncEnergyFromProvider(energy);
+      calculator.updateStockContext(stock.items);
+
+      if (mounted) {
+        setState(() {
+          _userSessionReady = true;
+          _loadedUserId = userId;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _userSessionReady = true;
+          _loadedUserId = userId;
+        });
+      }
+    } finally {
+      _sessionLoading = false;
+    }
   }
 
   void _resetUserProviders() {
@@ -102,10 +122,12 @@ class _AppShellState extends State<AppShell> {
     context.read<CalculatorProvider>().resetSession();
     _userSessionReady = false;
     _loadedUserId = null;
+    _sessionLoading = false;
   }
 
   void _onLoggedOut() {
-    _resetUserProviders();
+    if (!mounted) return;
+    setState(_resetUserProviders);
   }
 
   Future<void> _loadCoreData(

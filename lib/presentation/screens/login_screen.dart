@@ -6,8 +6,6 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/auth_submit_result.dart';
-import '../providers/calculator_provider.dart';
-import '../providers/sync_provider.dart';
 import '../widgets/common_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -46,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       switch (outcome) {
         case SignUpOutcome.loggedIn:
-          await _loadUserSession(auth);
+          break;
         case SignUpOutcome.needsLogin:
           setState(() {
             _isRegister = false;
@@ -60,19 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final success = await auth.signIn(email, password);
     if (!mounted) return;
-    if (success) {
-      await _loadUserSession(auth);
-    }
-  }
-
-  Future<void> _loadUserSession(AuthProvider auth) async {
-    final user = auth.user;
-    if (user == null || !context.mounted) return;
-
-    final sync = context.read<SyncProvider>();
-    final calculator = context.read<CalculatorProvider>();
-    await sync.loadAll(user.id);
-    await sync.applyProfileToCalculator(calculator, user.id);
+    if (!success) return;
   }
 
   void _toggleRegisterMode() {
