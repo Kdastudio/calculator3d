@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/env.dart';
 import '../../core/config/supabase_config.dart';
 import '../../data/repositories/auth_repository.dart';
+import 'auth_submit_result.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({AuthRepository? authRepository})
@@ -69,7 +70,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(String email, String password) async {
+  Future<SignUpOutcome> signUp(String email, String password) async {
     _setBusy();
     try {
       final response = await _authRepository.signUp(
@@ -77,30 +78,62 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
 
+      if (_isDuplicateRegistration(response.user)) {
+        _error = 'Este e-mail já está cadastrado. Faça login.';
+        return SignUpOutcome.failed;
+      }
+
       if (response.session != null) {
         _user = response.session!.user;
         _error = null;
         _info = null;
-        return true;
+        return SignUpOutcome.loggedIn;
       }
 
       if (response.user != null) {
+        final loggedIn = await _trySignInAfterSignUp(email, password);
+        if (loggedIn) {
+          return SignUpOutcome.loggedIn;
+        }
+
         _user = null;
-        _error =
-            'Conta criada, mas o login exige confirmação de e-mail. '
-            'Desative em Supabase → Authentication → Providers → Email → '
-            'desmarque "Confirm email", ou confirme o link enviado ao e-mail.';
-        return false;
+        _error = null;
+        _info =
+            'Conta criada com sucesso! Agora faça login com seu e-mail e senha.';
+        return SignUpOutcome.needsLogin;
       }
 
       _error = 'Não foi possível criar a conta.';
-      return false;
+      return SignUpOutcome.failed;
     } catch (e) {
       _error = _mapError(e);
-      return false;
+      return SignUpOutcome.failed;
     } finally {
       _loading = false;
       notifyListeners();
+    }
+  }
+
+  bool _isDuplicateRegistration(User? user) {
+    if (user == null) return false;
+    final identities = user.identities;
+    return identities != null && identities.isEmpty;
+  }
+
+  Future<bool> _trySignInAfterSignUp(String email, String password) async {
+    try {
+      final response = await _authRepository.signIn(
+        email: email,
+        password: password,
+      );
+      final user = response.session?.user ?? response.user;
+      if (user == null) return false;
+      _user = user;
+      _error = null;
+      _info = null;
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -113,6 +146,11 @@ class AuthProvider extends ChangeNotifier {
 
   void clearError() {
     _error = null;
+    _info = null;
+    notifyListeners();
+  }
+
+  void clearInfo() {
     _info = null;
     notifyListeners();
   }
@@ -136,18 +174,22 @@ class AuthProvider extends ChangeNotifier {
       }
       if (code == 'invalid_credentials' ||
           message.contains('invalid login credentials')) {
-        return 'E-mail ou senha inválidos. Se acabou de se cadastrar, '
-            'confirme o e-mail antes de entrar.';
+        return 'E-mail ou senha inválidos.';
       }
       if (code == 'user_already_registered' ||
           message.contains('user already registered')) {
-        return 'Este e-mail já está cadastrado.';
+        return 'Este e-mail já está cadastrado. Faça login.';
       }
       if (message.contains('password should be at least')) {
         return 'A senha deve ter pelo menos 6 caracteres.';
       }
       if (message.contains('signup is disabled')) {
         return 'Cadastro desabilitado no Supabase.';
+      }
+      if (message.contains('database error') ||
+          message.contains('saving new user')) {
+        return 'Erro ao salvar o perfil no Supabase. Verifique se as migrations '
+            'foram executadas no projeto.';
       }
       if (e.message.isNotEmpty) {
         return e.message;
@@ -159,7 +201,7 @@ class AuthProvider extends ChangeNotifier {
       return 'E-mail ou senha inválidos.';
     }
     if (message.contains('User already registered')) {
-      return 'Este e-mail já está cadastrado.';
+      return 'Este e-mail já está cadastrado. Faça login.';
     }
     if (message.contains('Password should be at least')) {
       return 'A senha deve ter pelo menos 6 caracteres.';

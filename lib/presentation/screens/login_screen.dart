@@ -5,6 +5,7 @@ import '../../core/config/env.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/auth_submit_result.dart';
 import '../providers/calculator_provider.dart';
 import '../providers/sync_provider.dart';
 import '../widgets/common_widgets.dart';
@@ -39,21 +40,47 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    final success = _isRegister
-        ? await auth.signUp(email, password)
-        : await auth.signIn(email, password);
+    if (_isRegister) {
+      final outcome = await auth.signUp(email, password);
+      if (!mounted) return;
 
-    if (!mounted) return;
-
-    if (success) {
-      final user = auth.user;
-      if (user != null && context.mounted) {
-        final sync = context.read<SyncProvider>();
-        final calculator = context.read<CalculatorProvider>();
-        await sync.loadAll(user.id);
-        await sync.applyProfileToCalculator(calculator, user.id);
+      switch (outcome) {
+        case SignUpOutcome.loggedIn:
+          await _loadUserSession(auth);
+        case SignUpOutcome.needsLogin:
+          setState(() {
+            _isRegister = false;
+            _passwordController.clear();
+          });
+        case SignUpOutcome.failed:
+          break;
       }
+      return;
     }
+
+    final success = await auth.signIn(email, password);
+    if (!mounted) return;
+    if (success) {
+      await _loadUserSession(auth);
+    }
+  }
+
+  Future<void> _loadUserSession(AuthProvider auth) async {
+    final user = auth.user;
+    if (user == null || !context.mounted) return;
+
+    final sync = context.read<SyncProvider>();
+    final calculator = context.read<CalculatorProvider>();
+    await sync.loadAll(user.id);
+    await sync.applyProfileToCalculator(calculator, user.id);
+  }
+
+  void _toggleRegisterMode() {
+    context.read<AuthProvider>().clearError();
+    setState(() {
+      _isRegister = !_isRegister;
+      _passwordController.clear();
+    });
   }
 
   @override
@@ -68,7 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(
               children: [
-                const AppIconBadge(icon: AppIcons.printer, color: AppTheme.accent, size: 22),
+                const AppIconBadge(
+                  icon: AppIcons.printer,
+                  color: AppTheme.accent,
+                  size: 22,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   _isRegister ? 'Criar conta' : 'Entrar',
@@ -91,11 +122,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: AppTheme.warning.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: AppTheme.warning.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: const Text(
                       'Supabase não configurado. Copie .env.example para .env.',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 Form(
@@ -110,7 +146,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Informe o e-mail';
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Informe o e-mail';
+                          }
                           if (!v.contains('@')) return 'E-mail inválido';
                           return null;
                         },
@@ -126,31 +164,63 @@ class _LoginScreenState extends State<LoginScreen> {
                               _obscurePassword ? AppIcons.eye : AppIcons.eyeOff,
                               size: 20,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
                         obscureText: _obscurePassword,
                         validator: (v) {
-                          if (v == null || v.length < 6) return 'Mínimo 6 caracteres';
+                          if (v == null || v.length < 6) {
+                            return 'Mínimo 6 caracteres';
+                          }
                           return null;
                         },
                       ),
+                      if (auth.info != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.success.withValues(alpha: 0.08),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusMd),
+                            border: Border.all(
+                              color: AppTheme.success.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Text(
+                            auth.info!,
+                            style: const TextStyle(
+                              color: AppTheme.success,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                       if (auth.error != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           auth.error!,
-                          style: const TextStyle(color: AppTheme.danger, fontSize: 13),
+                          style: const TextStyle(
+                            color: AppTheme.danger,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 24),
                       PrimaryButton(
                         label: _isRegister ? 'Criar conta' : 'Entrar',
-                        onPressed: auth.isLoading || !Env.hasSupabase ? null : _submit,
+                        onPressed:
+                            auth.isLoading || !Env.hasSupabase ? null : _submit,
                       ),
                       TextButton(
-                        onPressed: () => setState(() => _isRegister = !_isRegister),
+                        onPressed: _toggleRegisterMode,
                         child: Text(
-                          _isRegister ? 'Já tem conta? Entrar' : 'Não tem conta? Criar',
+                          _isRegister
+                              ? 'Já tem conta? Entrar'
+                              : 'Não tem conta? Criar',
                         ),
                       ),
                     ],
