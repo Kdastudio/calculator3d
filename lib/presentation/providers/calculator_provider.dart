@@ -541,6 +541,23 @@ class CalculatorProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void resetSession() {
+    _costInputs = CostInputs();
+    _taxInputs = TaxInputs();
+    _currency = CalculatorConstants.currencies.first;
+    _quoteData = QuoteData(
+      quoteNumber: _generateQuoteNumber(),
+      date: DateTime.now().toIso8601String().split('T').first,
+    );
+    _results = null;
+    _gCodeMetrics = null;
+    _gCodeFileName = null;
+    _gCodeContentBytes = null;
+    _stockAllocations = [];
+    _cachedStockItems = [];
+    notifyListeners();
+  }
+
   void applySavedCalculation({
     required CostInputs costInputs,
     required TaxInputs taxInputs,

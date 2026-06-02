@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
+import '../providers/auth_provider.dart';
 import 'inventory_screen.dart';
 import 'compare_screen.dart';
 import 'home_screen.dart';
@@ -37,6 +39,10 @@ class _MainNavShellState extends State<MainNavShell> {
     };
   }
 
+  Future<void> _logout() async {
+    await context.read<AuthProvider>().signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -45,13 +51,20 @@ class _MainNavShellState extends State<MainNavShell> {
 
         return Scaffold(
           backgroundColor: AppTheme.background,
-          body: Row(
+          body: Column(
             children: [
-              if (useRail) _buildRail(),
+              if (!useRail) _MobileHeader(onLogout: _logout),
               Expanded(
-                child: KeyedSubtree(
-                  key: ValueKey(_index),
-                  child: _buildPage(_index),
+                child: Row(
+                  children: [
+                    if (useRail) _buildRail(onLogout: _logout),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: ValueKey(_index),
+                        child: _buildPage(_index),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -75,7 +88,7 @@ class _MainNavShellState extends State<MainNavShell> {
     );
   }
 
-  Widget _buildRail() {
+  Widget _buildRail({required VoidCallback onLogout}) {
     return Container(
       width: 152,
       decoration: const BoxDecoration(
@@ -155,7 +168,60 @@ class _MainNavShellState extends State<MainNavShell> {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+            child: Tooltip(
+              message: 'Desconectar',
+              child: IconButton(
+                onPressed: onLogout,
+                icon: const Icon(AppIcons.logout, size: 20),
+                style: IconButton.styleFrom(
+                  foregroundColor: AppTheme.textSecondary,
+                  backgroundColor: AppTheme.surfaceRaised,
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _MobileHeader extends StatelessWidget {
+  const _MobileHeader({required this.onLogout});
+
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.card,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              const Text(
+                'KDA3D Print Studio',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Tooltip(
+                message: 'Desconectar',
+                child: IconButton(
+                  onPressed: onLogout,
+                  icon: const Icon(AppIcons.logout, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

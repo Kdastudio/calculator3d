@@ -7,7 +7,6 @@ import '../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/calculator_provider.dart';
 import '../providers/sync_provider.dart';
-import 'home_screen.dart';
 import '../widgets/common_widgets.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -54,10 +53,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await sync.loadAll(user.id);
         await sync.applyProfileToCalculator(calculator, user.id);
       }
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
     }
   }
 
@@ -81,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sincronize cálculos e orçamentos entre dispositivos',
+                  'Acesse sua conta para usar a calculadora',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -155,16 +150,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           _isRegister ? 'Já tem conta? Entrar' : 'Não tem conta? Criar',
                         ),
-                      ),
-                      const Divider(height: 32),
-                      PrimaryButton(
-                        label: 'Continuar sem conta',
-                        outlined: true,
-                        onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const HomeScreen()),
-                          );
-                        },
                       ),
                     ],
                   ),

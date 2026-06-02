@@ -19,11 +19,13 @@ class StockProvider extends ChangeNotifier {
   bool _loading = false;
   bool _initialized = false;
   String? _message;
+  String? _userId;
 
   List<StockItem> get items => List.unmodifiable(_items);
   bool get isLoading => _loading;
   bool get isInitialized => _initialized;
   String? get message => _message;
+  String? get userId => _userId;
 
   StockItem? findById(String? id) {
     if (id == null) return null;
@@ -33,18 +35,29 @@ class StockProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> initialize() async {
-    if (_initialized) return;
+  Future<void> loadForUser(String userId) async {
+    if (_userId == userId && _initialized) return;
+
+    _userId = userId;
     _loading = true;
     notifyListeners();
 
     try {
-      var local = await _repository.loadLocal();
-      if (local.isEmpty) {
-        local = _service.defaultSamples();
-        await _repository.saveLocal(local);
+      var local = await _repository.loadLocal(userId);
+      final remote = await _repository.fetchRemote(userId);
+
+      if (remote.isNotEmpty) {
+        _items = remote;
+        await _repository.saveLocal(userId, _items);
+      } else {
+        _items = local;
+        if (local.isNotEmpty) {
+          for (final item in local) {
+            await _repository.upsertRemote(userId, item);
+          }
+        }
       }
-      _items = local;
+
       _initialized = true;
     } catch (e) {
       _message = 'Erro ao carregar estoque: $e';
@@ -54,11 +67,52 @@ class StockProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> syncFromCloud(String userId) async {
+    if (_userId != userId) {
+      await loadForUser(userId);
+      return;
+    }
+
+    try {
+      final remote = await _repository.fetchRemote(userId);
+      if (remote.isNotEmpty) {
+        _items = remote;
+        await _repository.saveLocal(userId, _items);
+        notifyListeners();
+      }
+    } catch (e) {
+      _message = 'Sync parcial do estoque: $e';
+      notifyListeners();
+    }
+  }
+
+  void resetSession() {
+    _items = [];
+    _loading = false;
+    _initialized = false;
+    _message = null;
+    _userId = null;
+    notifyListeners();
+  }
+
   String newId() => _repository.newId();
+
+  Future<void> _persist() async {
+    final userId = _userId;
+    if (userId == null) return;
+    await _repository.saveLocal(userId, _items);
+  }
+
+  Future<void> _syncItem(StockItem item) async {
+    final userId = _userId;
+    if (userId == null) return;
+    await _repository.upsertRemote(userId, item);
+  }
 
   Future<void> addItem(StockItem item) async {
     _items = [..._items, item];
-    await _repository.saveLocal(_items);
+    await _persist();
+    await _syncItem(item);
     notifyListeners();
   }
 
@@ -66,13 +120,15 @@ class StockProvider extends ChangeNotifier {
     final index = _items.indexWhere((i) => i.id == item.id);
     if (index < 0) return;
     _items = [..._items]..[index] = item;
-    await _repository.saveLocal(_items);
+    await _persist();
+    await _syncItem(item);
     notifyListeners();
   }
 
   Future<void> deleteItem(String id) async {
     _items = _items.where((i) => i.id != id).toList();
-    await _repository.saveLocal(_items);
+    await _persist();
+    await _repository.deleteRemote(id);
     notifyListeners();
   }
 

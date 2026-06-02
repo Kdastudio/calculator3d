@@ -10,6 +10,7 @@ import '../providers/quote_history_provider.dart';
 import '../providers/stock_provider.dart';
 import '../providers/supply_provider.dart';
 import '../providers/sync_provider.dart';
+import 'login_screen.dart';
 import 'main_nav_shell.dart';
 
 class AppShell extends StatefulWidget {
@@ -22,6 +23,9 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   VoidCallback? _stockSyncListener;
   StockProvider? _stockProvider;
+  bool _coreReady = false;
+  bool _userSessionReady = false;
+  String? _loadedUserId;
 
   @override
   void dispose() {
@@ -30,6 +34,7 @@ class _AppShellState extends State<AppShell> {
     }
     super.dispose();
   }
+
   @override
   void initState() {
     super.initState();
@@ -37,33 +42,44 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _bootstrap() {
-    if (!mounted) return;
+    if (!mounted || _coreReady) return;
+    _coreReady = true;
 
-    final auth = context.read<AuthProvider>();
     final energy = context.read<EnergyProvider>();
+    final stock = context.read<StockProvider>();
+    final calculator = context.read<CalculatorProvider>();
+
+    unawaited(_loadCoreData(energy, stock, calculator));
+  }
+
+  Future<void> _loadUserSession(AuthProvider auth) async {
+    if (!auth.isAuthenticated || auth.user == null) return;
+    final userId = auth.user!.id;
+
+    if (_loadedUserId != null && _loadedUserId != userId) {
+      _resetUserProviders();
+    }
+    if (_userSessionReady && _loadedUserId == userId) return;
+
+    final sync = context.read<SyncProvider>();
     final supplies = context.read<SupplyProvider>();
     final stock = context.read<StockProvider>();
     final history = context.read<QuoteHistoryProvider>();
     final calculator = context.read<CalculatorProvider>();
+    final energy = context.read<EnergyProvider>();
 
-    unawaited(_loadCoreData(energy, supplies, stock, history, calculator, auth));
-  }
+    await sync.loadAll(userId);
+    if (!mounted) return;
 
-  Future<void> _loadCoreData(
-    EnergyProvider energy,
-    SupplyProvider supplies,
-    StockProvider stock,
-    QuoteHistoryProvider history,
-    CalculatorProvider calculator,
-    AuthProvider auth,
-  ) async {
     await Future.wait([
-      energy.initialize(),
-      supplies.initialize(userId: auth.user?.id),
-      stock.initialize(),
-      history.initialize(),
+      supplies.loadForUser(userId),
+      stock.loadForUser(userId),
+      history.loadForUser(userId),
     ]);
+    if (!mounted) return;
 
+    calculator.resetSession();
+    await sync.applyProfileToCalculator(calculator, userId);
     if (!mounted) return;
 
     energy.applyFromCostInputs(
@@ -72,37 +88,74 @@ class _AppShellState extends State<AppShell> {
       tariffFlag: calculator.costInputs.tariffFlag,
     );
     calculator.syncEnergyFromProvider(energy);
+    calculator.updateStockContext(stock.items);
+
+    _userSessionReady = true;
+    _loadedUserId = userId;
+  }
+
+  void _resetUserProviders() {
+    context.read<SyncProvider>().resetSession();
+    context.read<StockProvider>().resetSession();
+    context.read<SupplyProvider>().resetSession();
+    context.read<QuoteHistoryProvider>().resetSession();
+    context.read<CalculatorProvider>().resetSession();
+    _userSessionReady = false;
+    _loadedUserId = null;
+  }
+
+  void _onLoggedOut() {
+    _resetUserProviders();
+  }
+
+  Future<void> _loadCoreData(
+    EnergyProvider energy,
+    StockProvider stock,
+    CalculatorProvider calculator,
+  ) async {
+    await energy.initialize();
+
+    if (!mounted) return;
 
     _stockProvider = stock;
     _stockSyncListener = () {
       if (mounted) calculator.updateStockContext(stock.items);
     };
     stock.addListener(_stockSyncListener!);
-    calculator.updateStockContext(stock.items);
-
-    if (!auth.isAuthenticated || auth.user == null) return;
-
-    final sync = context.read<SyncProvider>();
-    final userId = auth.user!.id;
-
-    await sync.loadAll(userId);
-    if (!mounted) return;
-
-    await Future.wait([
-      sync.applyProfileToCalculator(calculator, userId),
-      supplies.syncFromCloud(userId),
-    ]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
+        if (!_coreReady && !auth.isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+        }
+
         if (auth.isLoading) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
+
+        if (!auth.isAuthenticated) {
+          if (_userSessionReady) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _onLoggedOut();
+            });
+          }
+          return const LoginScreen();
+        }
+
+        if (!_userSessionReady || _loadedUserId != auth.user?.id) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _loadUserSession(auth);
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         return const MainNavShell();
       },
     );

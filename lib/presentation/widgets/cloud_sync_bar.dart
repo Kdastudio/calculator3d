@@ -6,7 +6,6 @@ import '../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/calculator_provider.dart';
 import '../providers/sync_provider.dart';
-import '../screens/login_screen.dart';
 import 'common_widgets.dart';
 
 class CloudSyncBar extends StatelessWidget {
@@ -22,22 +21,6 @@ class CloudSyncBar extends StatelessWidget {
         tone: AppBannerTone.warning,
         icon: AppIcons.cloudOff,
         message: 'Nuvem desativada — rode com --dart-define-from-file=.env',
-      );
-    }
-
-    if (!auth.isAuthenticated) {
-      return AppBanner(
-        icon: AppIcons.cloudOff,
-        message: 'Entre para salvar e sincronizar entre dispositivos',
-        action: GhostButton(
-          label: 'Entrar',
-          icon: AppIcons.login,
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          },
-        ),
       );
     }
 

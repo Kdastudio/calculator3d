@@ -10,14 +10,14 @@ import 'package:kda3d_calculator/presentation/providers/quote_history_provider.d
 import 'package:kda3d_calculator/presentation/providers/stock_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/supply_provider.dart';
 import 'package:kda3d_calculator/presentation/providers/sync_provider.dart';
-import 'package:kda3d_calculator/presentation/screens/home_screen.dart';
+import 'package:kda3d_calculator/presentation/screens/app_shell.dart';
 
 void main() {
   setUpAll(() async {
     await Env.load();
   });
 
-  testWidgets('App carrega a calculadora', (WidgetTester tester) async {
+  testWidgets('App exige login antes da calculadora', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(600, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -34,14 +34,13 @@ void main() {
           ChangeNotifierProvider(create: (_) => SyncProvider()),
         ],
         child: const MaterialApp(
-          home: HomeScreen(),
+          home: AppShell(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('KDA3D Print Studio'), findsOneWidget);
-    expect(find.text('Leitor G-code'), findsOneWidget);
-    expect(find.text('Energia elétrica'), findsOneWidget);
+    expect(find.text('Acesse sua conta para usar a calculadora'), findsOneWidget);
+    expect(find.text('KDA3D Print Studio'), findsNothing);
   });
 }

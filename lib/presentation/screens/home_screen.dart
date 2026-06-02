@@ -4,10 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/layout/app_layout.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
-import '../providers/auth_provider.dart';
 import '../providers/calculator_provider.dart';
-import '../providers/sync_provider.dart';
-import '../screens/login_screen.dart';
 import '../widgets/cloud_sync_bar.dart';
 import '../widgets/cost_section.dart';
 import '../widgets/energy_region_selector.dart';
@@ -21,17 +18,9 @@ import '../widgets/quote_section.dart';
 import '../widgets/quote_stock_section.dart';
 import '../widgets/results_section.dart';
 import '../widgets/tax_section.dart';
-import '../widgets/common_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  Future<void> _handleLogout(BuildContext context) async {
-    await context.read<AuthProvider>().signOut();
-    if (context.mounted) {
-      context.read<SyncProvider>().resetSession();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +56,6 @@ class HomeScreen extends StatelessWidget {
                 );
               },
             ),
-            _AuthActions(onLogout: () => _handleLogout(context)),
             const SizedBox(width: 8),
           ],
         ),
@@ -297,59 +285,6 @@ class _QuoteWorkspace extends StatelessWidget {
         const SizedBox(height: 16),
         QuotePreviewSection(floating: !useCards),
       ],
-    );
-  }
-}
-
-class _AuthActions extends StatelessWidget {
-  const _AuthActions({required this.onLogout});
-
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    return Selector<AuthProvider, ({bool auth, String? email})>(
-      selector: (_, auth) =>
-          (auth: auth.isAuthenticated, email: auth.userEmail),
-      builder: (context, data, _) {
-        if (data.auth) {
-          return PopupMenuButton<String>(
-            icon: const Icon(AppIcons.user),
-            tooltip: 'Conta',
-            onSelected: (value) {
-              if (value == 'logout') onLogout();
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                enabled: false,
-                child: Text(
-                  data.email ?? '',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(AppIcons.logout, size: 16),
-                    SizedBox(width: 10),
-                    Text('Sair'),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-        return GhostButton(
-          label: 'Entrar',
-          icon: AppIcons.login,
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          },
-        );
-      },
     );
   }
 }

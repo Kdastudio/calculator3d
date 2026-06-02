@@ -19,6 +19,7 @@ class SupplyProvider extends ChangeNotifier {
   bool _loading = false;
   String? _message;
   bool _initialized = false;
+  String? _userId;
 
   List<SupplyItem> get supplies => List.unmodifiable(_supplies);
   List<SupplyItem> get activeSupplies =>
@@ -27,6 +28,7 @@ class SupplyProvider extends ChangeNotifier {
   bool get isLoading => _loading;
   String? get message => _message;
   bool get isInitialized => _initialized;
+  String? get userId => _userId;
 
   SupplyItem? findById(String? id) {
     if (id == null) return null;
@@ -36,23 +38,38 @@ class SupplyProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> initialize({String? userId}) async {
-    if (_initialized) return;
+  Future<void> loadForUser(String userId) async {
+    if (_userId == userId && _initialized) return;
+
+    _userId = userId;
     _loading = true;
     notifyListeners();
 
     try {
-      var local = await _repository.loadLocal();
-      if (local.isEmpty) {
-        local = _service.defaultSamples();
-        await _repository.saveLocal(local);
-      }
-      _supplies = local;
-      _history = await _repository.loadLocalHistory();
+      final local = await _repository.loadLocal(userId);
+      final localHistory = await _repository.loadLocalHistory(userId);
+      final remote = await _repository.fetchRemote(userId);
+      final remoteHistory = await _repository.fetchRemoteHistory(userId);
 
-      if (userId != null) {
-        await syncFromCloud(userId);
+      if (remote.isNotEmpty) {
+        _supplies = remote;
+        await _repository.saveLocal(userId, _supplies);
+      } else {
+        _supplies = local;
+        if (local.isNotEmpty) {
+          for (final supply in local) {
+            await _repository.upsertRemote(userId, supply);
+          }
+        }
       }
+
+      if (remoteHistory.isNotEmpty) {
+        _history = remoteHistory;
+        await _repository.saveLocalHistory(userId, _history);
+      } else {
+        _history = localHistory;
+      }
+
       _initialized = true;
     } catch (e) {
       _message = 'Erro ao carregar insumos: $e';
@@ -63,16 +80,21 @@ class SupplyProvider extends ChangeNotifier {
   }
 
   Future<void> syncFromCloud(String userId) async {
+    if (_userId != userId) {
+      await loadForUser(userId);
+      return;
+    }
+
     try {
       final remote = await _repository.fetchRemote(userId);
       if (remote.isNotEmpty) {
         _supplies = remote;
-        await _repository.saveLocal(_supplies);
+        await _repository.saveLocal(userId, _supplies);
       }
       final remoteHistory = await _repository.fetchRemoteHistory(userId);
       if (remoteHistory.isNotEmpty) {
         _history = remoteHistory;
-        await _repository.saveLocalHistory(_history);
+        await _repository.saveLocalHistory(userId, _history);
       }
     } catch (e) {
       _message = 'Sync parcial: $e';
@@ -80,17 +102,33 @@ class SupplyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void resetSession() {
+    _supplies = [];
+    _history = [];
+    _loading = false;
+    _message = null;
+    _initialized = false;
+    _userId = null;
+    notifyListeners();
+  }
+
+  String _resolveUserId(String? userId) => userId ?? _userId ?? '';
+
   Future<void> addSupply(SupplyItem supply, {String? userId}) async {
+    final uid = _resolveUserId(userId);
+    if (uid.isEmpty) return;
+
     _supplies = [..._supplies, supply];
-    await _recordPrice(supply);
-    await _repository.saveLocal(_supplies);
-    if (userId != null) {
-      await _repository.upsertRemote(userId, supply);
-    }
+    await _recordPrice(supply, uid);
+    await _repository.saveLocal(uid, _supplies);
+    await _repository.upsertRemote(uid, supply);
     notifyListeners();
   }
 
   Future<void> updateSupply(SupplyItem supply, {String? userId}) async {
+    final uid = _resolveUserId(userId);
+    if (uid.isEmpty) return;
+
     final index = _supplies.indexWhere((s) => s.id == supply.id);
     if (index < 0) return;
 
@@ -98,28 +136,27 @@ class SupplyProvider extends ChangeNotifier {
     _supplies = [..._supplies]..[index] = supply;
 
     if (previous.pricePerUnit != supply.pricePerUnit) {
-      await _recordPrice(supply);
+      await _recordPrice(supply, uid);
     }
 
-    await _repository.saveLocal(_supplies);
-    if (userId != null) {
-      await _repository.upsertRemote(userId, supply);
-    }
+    await _repository.saveLocal(uid, _supplies);
+    await _repository.upsertRemote(uid, supply);
     notifyListeners();
   }
 
   Future<void> deleteSupply(String id, {String? userId}) async {
+    final uid = _resolveUserId(userId);
+    if (uid.isEmpty) return;
+
     _supplies = _supplies.where((s) => s.id != id).toList();
     _history = _history.where((h) => h.supplyId != id).toList();
-    await _repository.saveLocal(_supplies);
-    await _repository.saveLocalHistory(_history);
-    if (userId != null) {
-      await _repository.deleteRemote(id);
-    }
+    await _repository.saveLocal(uid, _supplies);
+    await _repository.saveLocalHistory(uid, _history);
+    await _repository.deleteRemote(id);
     notifyListeners();
   }
 
-  Future<void> _recordPrice(SupplyItem supply) async {
+  Future<void> _recordPrice(SupplyItem supply, String userId) async {
     final entry = SupplyPriceHistory(
       id: _repository.newId(),
       supplyId: supply.id,
@@ -128,7 +165,8 @@ class SupplyProvider extends ChangeNotifier {
       recordedAt: DateTime.now(),
     );
     _history = [..._history, entry];
-    await _repository.saveLocalHistory(_history);
+    await _repository.saveLocalHistory(userId, _history);
+    await _repository.insertPriceHistoryRemote(userId, entry);
   }
 
   List<SupplyItem> rankCheapest({SupplyType? type}) =>

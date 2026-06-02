@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/config/supabase_config.dart';
+import '../../core/utils/user_storage_keys.dart';
 import '../../domain/models/supply_models.dart';
 
 class SupplyRepository {
@@ -15,16 +16,14 @@ class SupplyRepository {
 
   final SupabaseClient? _client;
   SharedPreferences? _prefs;
-  static const _suppliesKey = 'kda3d_supplies';
-  static const _historyKey = 'kda3d_supply_history';
   static const _uuid = Uuid();
 
   Future<SharedPreferences> get _storage async =>
       _prefs ??= await SharedPreferences.getInstance();
 
-  Future<List<SupplyItem>> loadLocal() async {
+  Future<List<SupplyItem>> loadLocal(String userId) async {
     final prefs = await _storage;
-    final raw = prefs.getString(_suppliesKey);
+    final raw = prefs.getString(UserStorageKeys.supplies(userId));
     if (raw == null) return [];
     final list = jsonDecode(raw) as List<dynamic>;
     return list
@@ -32,9 +31,9 @@ class SupplyRepository {
         .toList();
   }
 
-  Future<List<SupplyPriceHistory>> loadLocalHistory() async {
+  Future<List<SupplyPriceHistory>> loadLocalHistory(String userId) async {
     final prefs = await _storage;
-    final raw = prefs.getString(_historyKey);
+    final raw = prefs.getString(UserStorageKeys.supplyHistory(userId));
     if (raw == null) return [];
     final list = jsonDecode(raw) as List<dynamic>;
     return list
@@ -42,16 +41,19 @@ class SupplyRepository {
         .toList();
   }
 
-  Future<void> saveLocal(List<SupplyItem> supplies) async {
+  Future<void> saveLocal(String userId, List<SupplyItem> supplies) async {
     final prefs = await _storage;
     final json = jsonEncode(supplies.map((s) => s.toJson()).toList());
-    await prefs.setString(_suppliesKey, json);
+    await prefs.setString(UserStorageKeys.supplies(userId), json);
   }
 
-  Future<void> saveLocalHistory(List<SupplyPriceHistory> history) async {
+  Future<void> saveLocalHistory(
+    String userId,
+    List<SupplyPriceHistory> history,
+  ) async {
     final prefs = await _storage;
     final json = jsonEncode(history.map((h) => h.toJson()).toList());
-    await prefs.setString(_historyKey, json);
+    await prefs.setString(UserStorageKeys.supplyHistory(userId), json);
   }
 
   Future<List<SupplyItem>> fetchRemote(String userId) async {
